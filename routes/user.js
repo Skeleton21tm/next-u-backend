@@ -29,7 +29,7 @@ module.exports = async function (fastify, opts) {
 
       return {
         user: {
-          email :userProfile.email,
+          email: userProfile.email,
           username : userProfile.username,
           token : userProfile.token
         }
