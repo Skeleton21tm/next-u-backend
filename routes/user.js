@@ -21,7 +21,15 @@ module.exports = async function (fastify, opts) {
     method: 'GET',
     preHandler: validateToken,
     handler: async (req, reply) => {
-      // add the route implementation here
+      // Get user information from the database using the userId
+      const user = await database('user')
+        .select(['email', 'username', 'token'])
+        .where({ userId: req.userId })
+        .first()
+
+      return {
+        user
+      }
     }
   })
 
@@ -44,7 +52,27 @@ module.exports = async function (fastify, opts) {
     url: '/api/users',
     method: 'POST',
     handler: async (req, reply) => {
-      // add the route implementation here
+      const { username, email, password } = req.body.user
+
+      // Generate a token
+      const token = await generateToken()
+
+      // Hash the password
+      const hashedPassword = await hashString(password)
+
+      // Insert the user into the database
+      const [userId] = await database('user')
+        .insert({ username, email, password: hashedPassword, token })
+
+      // Get user information for the response
+      const user = await database('user')
+        .select(['email', 'username', 'token'])
+        .where({ userId })
+        .first()
+
+      return {
+        user
+      }
     }
   })
 
@@ -65,22 +93,40 @@ module.exports = async function (fastify, opts) {
   // if the passwords are NOT a match, the response should have a status code 401 and
   // the request body should have a "message" field with the value "invalid credentials"
   // HINT: remember that all utility methods ( hashString and generateToken ) are asynchronous functions! they need to be used with "await"
-  fastify.post('/api/users/login', async function (req, reply) {
-    // add the route implementation here
-    const { email, password } = req.body.user
-    const user = await database('user').where({ email }).first()
-    const equal = await stringIsAMatch(password, user.password)
-    if (!equal) {
-      reply.status(401)
-      return {
-        message: 'Invalid credentials'
+  fastify.route({
+    url: '/api/users/login',
+    method: 'POST',
+    handler: async (req, reply) => {
+      const { email, password } = req.body.user
+
+      // Retrieve the user from the database
+      const user = await database('user')
+        .where({ email })
+        .first()
+
+      if (!user) {
+        reply.status(401)
+        return {
+          message: 'Invalid credentials'
+        }
       }
-    }
-    return {
-      user: {
-        username: user.username,
-        token: user.token,
-        email: user.email,
+
+      // Compare the password using stringIsAMatch
+      const isMatch = await stringIsAMatch(password, user.password)
+
+      if (!isMatch) {
+        reply.status(401)
+        return {
+          message: 'Invalid credentials'
+        }
+      }
+
+      return {
+        user: {
+          username: user.username,
+          token: user.token,
+          email: user.email
+        }
       }
     }
   })
