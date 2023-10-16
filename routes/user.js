@@ -1,9 +1,3 @@
-Skeleton
-skeleton21
-Invisible
-
-sanda — 06/09/2023 16:34
-sanda — Aujourd’hui à 09:34
 'use strict'
 const database = require('../utils/database')
 const { stringIsAMatch, hashString, generateToken, validateToken } = require('../utils/index')
